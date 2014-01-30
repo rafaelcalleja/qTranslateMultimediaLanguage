@@ -22,3 +22,7 @@ Este fix añade el selector de idiomas para los archivos multimedia:
 ![alt text][addmedia]
 [addmedia]: https://raw.github.com/rafaelcalleja/qTranslateMultimediaLanguage/master/Resources/images/LanguageMedia.png "Add Media button"
 
+
+El archivo qtranslate_hook.path puede ser aplicado a otras versiones de qtranslate y puede que funcionen.
+
+    https://github.com/rafaelcalleja/qTranslateMultimediaLanguage/blob/master/qtranslate_hooks.patch
