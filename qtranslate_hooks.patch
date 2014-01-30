@@ -1,0 +1,166 @@
+diff --git a/qtranslate/qtranslate_hooks.php b/qtranslate/qtranslate_hooks.php
+index 4e40543..2965af7 100644
+--- a/qtranslate/qtranslate_hooks.php
++++ b/qtranslate/qtranslate_hooks.php
+@@ -239,6 +239,161 @@ function wpsupercache_supercache_dir($uri) {
+ 	$uri = strtolower(preg_replace('/:.*$/', '',  $_SERVER["HTTP_HOST"])) . $uri; // To avoid XSS attacs
+ 	return $uri;
+ }
++
++function get_terms_of_groups_lite ($group_ids, $taxonomy, $taxonomy_child, $order = '') {
++    global $wpdb;
++    if ( !is_array($group_ids) )
++        $group_ids = array($group_ids);
++    $group_ids = array_map('intval', $group_ids);
++    $group_ids = implode(', ', $group_ids);
++    $theorderby = '';
++
++    // lite release
++    if ($order == 'ASC' || $order == 'DESC') $theorderby = ' ORDER BY tr.term_order '.$order ;
++
++    $query = "SELECT t.*, tt2.term_taxonomy_id, tt2.description,tt2.parent, tt2.count, tt2.taxonomy, tr.term_order FROM $wpdb->term_relationships AS tr INNER JOIN $wpdb->term_taxonomy AS tt ON tr.term_taxonomy_id = tt.term_taxonomy_id INNER JOIN $wpdb->terms AS t ON t.term_id = tr.object_id INNER JOIN $wpdb->term_taxonomy AS tt2 ON tt2.term_id = tr.object_id WHERE tt.taxonomy IN ('".$taxonomy."') AND tt2.taxonomy = '".$taxonomy_child."' AND tt.term_id IN (".$group_ids.") ".$theorderby;
++
++    $listterms = $wpdb->get_results($query);
++    if ( ! $listterms )
++        return array();
++
++    return $listterms;
++}
++
++if ( ! defined( 'TAXOLANGSGROUP' ) ) define('TAXOLANGSGROUP', 'languages_group');
++if ( ! defined( 'TAXONAME' ) ) define('TAXONAME', 'language');
++/**************** Attachment post language  *******************/
++
++function add_language_attachment_fields ($form_fields, $post) {
++
++    global $q_config;
++
++    $groupId = $q_config['langs_group_id'];
++
++    $attachment_id = $post->ID;
++
++    // get list of languages for popup
++    $attachment_post_language = get_attachment_language($attachment_id, 'slug');
++
++    $listlanguages = $q_config['enabled_languages'] ;
++
++    $html_input = '<select name="attachments['.$attachment_id.'][attachment_post_language]" ><option value="undefined">'.__('Idioma…','').'</option>';
++    foreach ($q_config['language_name'] as $key => $language) {
++        if(!in_array($key, $listlanguages)) continue;
++        $selected = ( $attachment_post_language && $attachment_post_language != '' && $attachment_post_language == $key) ? 'selected=selected' : '';
++        $html_input .= '<option value="'.$key.'" '.$selected.'>'.$language.' ('.$key.')</option>';
++    }
++    $html_input .= '</select>';
++
++    $form_fields['attachment_post_language'] = array(
++        'label'      => __('Language', 'xili-language'),
++        'input'      => 'html',
++        'html'       =>  $html_input,
++        'helps'      => __('Idioma del Adjunto.', '')
++    );
++
++
++
++    return $form_fields ;
++}
++
++// attachment_fields_to_save apply_filters('attachment_fields_to_save', $post, $attachment);
++
++function set_attachment_fields_to_save ( $post, $attachment ) {
++
++    if ( isset($attachment['attachment_post_language']) ){
++        if ( $attachment['attachment_post_language'] != '' && $attachment['attachment_post_language'] != 'undefined' ) {
++            wp_set_object_terms($post['ID'], $attachment['attachment_post_language'], TAXONAME);
++        } else {
++            wp_delete_object_term_relationships( $post['ID'], TAXONAME );
++        }
++    }
++
++
++    return $post;
++}
++
++function get_attachment_language ( $post_ID, $result = 'slug' ) {
++    $ress = wp_get_object_terms($post_ID, TAXONAME);
++    if ( $ress ) {
++        $obj_term = $ress[0]; // today only one language per post
++
++        switch ( $result ) {
++            case 'iso':
++                $postlang = ('' != $obj_term->name) ? $obj_term->name : "";
++                break;
++            case 'name':
++                $postlang = ('' != $obj_term->description) ? $obj_term->description : "";
++                break;
++            default: // slug
++                $postlang = ('' != $obj_term->slug) ? $obj_term->slug : "";
++        }
++    } else {
++        $postlang = "";
++    }
++    return $postlang;
++}
++
++function init_and_register_language_post_taxonomy () {
++    register_taxonomy( TAXONAME, 'post', array('hierarchical' => false, 'label' => false, 'rewrite' => false , 'update_count_callback' => '', 'show_ui' => false, '_builtin' => false ));
++    register_taxonomy( TAXOLANGSGROUP, 'term', array('hierarchical' => false, 'update_count_callback' => '', 'show_ui' => false, 'label'=>false, 'rewrite' => false, '_builtin' => false ));
++}
++
++function safe_lang_term_creation ( $term, $args ) {
++    global $wpdb ;
++    // test if exists with other slug or name
++    if ( $term_id = term_exists( $term ) ) {
++        $existing_term = $wpdb->get_row( $wpdb->prepare( "SELECT name, slug FROM $wpdb->terms WHERE term_id = %d", $term_id), ARRAY_A );
++        if ( $existing_term['slug'] != $args['slug'] ) {
++            $res = wp_insert_term( $term.'xl', TAXONAME, $args); // temp insert with temp other name
++            $args['name'] = $term ;
++            $res = wp_update_term( $res['term_id'], TAXONAME, $args);
++        } else {
++            return new WP_Error('term_exists', __('A term with the name provided already exists.'), $term_id );
++        }
++    } else {
++        $res = wp_insert_term( $term, TAXONAME, $args);
++    }
++    if (is_wp_error($res)) {
++        return $res ;
++    } else {
++        $theids = $res;
++    }
++    return $theids ;
++}
++
++function init_vars(){
++
++    $cache_suffix = "_ad";
++
++    $thegroup = get_terms(TAXOLANGSGROUP, array('hide_empty' => false,'slug' => 'the-langs-group', 'cache_domain' => 'core1' . $cache_suffix));
++
++    if ( array() == $thegroup ) { /* update langs group 0.9.8 and if from start 2.3.1 */
++        $args = array( 'alias_of' => '', 'description' => 'the group of languages', 'parent' => 0, 'slug' =>'the-langs-group');
++        wp_insert_term( 'the-langs-group', TAXOLANGSGROUP, $args); /* create and link to existing langs */
++        $list_languages = get_terms(TAXONAME, array('hide_empty' => false, 'get' => 'all', 'cache_domain' => 'core1' . $cache_suffix));
++
++    } else {
++
++        $list_languages = get_terms(TAXONAME, array('hide_empty' => false, 'get' => 'all', 'cache_domain' => 'core2'.$cache_suffix));
++        foreach( $list_languages as $language ) {
++            wp_set_object_terms( $language->term_id, 'the-langs-group', TAXOLANGSGROUP );
++        }
++    }
++
++    global $q_config;
++
++    $q_config['langs_group_id'] = $thegroup[0]->term_id;
++    $q_config['this->langs_group_tt_id'] = $thegroup[0]->term_taxonomy_id;
++
++
++}
++
++add_filter( 'attachment_fields_to_edit', 'add_language_attachment_fields', 10, 2 ); // 2.6.3
++add_filter( 'attachment_fields_to_save', 'set_attachment_fields_to_save', 10, 2 ); // 2.6.3
++add_action( 'init', 'init_and_register_language_post_taxonomy', 9 );
++add_action( 'init', 'init_vars', 9 );
++
+ add_filter('supercache_dir',					'wpsupercache_supercache_dir',0);
+ 
+ // Hooks (Actions)
