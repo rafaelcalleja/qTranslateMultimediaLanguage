@@ -21,4 +21,4 @@ This fix adds the language switcher for the media files:
 <img src="https://raw.github.com/rafaelcalleja/qTranslateMultimediaLanguage/master/Resources/images/LanguageMedia.png" alt="Add Media button">
 
 
-The file [`qtranslate_hook.path`] can be applied to other versions of qTranslate and can work.
+The file `qtranslate_hook.path` can be applied to other versions of qTranslate and can work.
