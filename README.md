@@ -1,10 +1,10 @@
 qTranslateMultimediaLanguage
 ============================
 
-Simple fix que permite seleccionar el idioma para los archivos multimedia usando el plugin qTranslate de Wordpress
+Simple fix that allows you to select the language for the media files using the qTranslate plugin for Wordpress
 
 
-### Testado en qTranslate version : 2.5.39
+### Tested on qTranslate version : 2.5.39
 
     Requires: 3.8.1 or higher
     Compatible up to: 3.8.1
@@ -14,15 +14,11 @@ Simple fix que permite seleccionar el idioma para los archivos multimedia usando
 http://wordpress.org/plugins/qtranslate/
 
 
-Este fix añade el selector de idiomas para los archivos multimedia:
+This fix adds the language switcher for the media files:
 
-![alt text][library]
-[library]: https://raw.github.com/rafaelcalleja/qTranslateMultimediaLanguage/master/Resources/images/LangSelectMediaLibrary.png "Libreria Multimedia"
+<img src="https://raw.github.com/rafaelcalleja/qTranslateMultimediaLanguage/master/Resources/images/LangSelectMediaLibrary.png" alt="Media Library">
 
-![alt text][addmedia]
-[addmedia]: https://raw.github.com/rafaelcalleja/qTranslateMultimediaLanguage/master/Resources/images/LanguageMedia.png "Add Media button"
+<img src="https://raw.github.com/rafaelcalleja/qTranslateMultimediaLanguage/master/Resources/images/LanguageMedia.png" alt="Add Media button">
 
 
-El archivo qtranslate_hook.path puede ser aplicado a otras versiones de qtranslate y puede que funcionen.
-
-    https://github.com/rafaelcalleja/qTranslateMultimediaLanguage/blob/master/qtranslate_hooks.patch
+The file `qtranslate_hook.path` can be applied to other versions of qTranslate and can work.
